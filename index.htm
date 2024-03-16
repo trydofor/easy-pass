@@ -1,0 +1,240 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <title>Easy Hash</title>
+  <script type="text/javascript">
+  var charBit = 8;
+
+  function sha1Binary(str) {
+    var w = Array(80);
+    var a = 0x67452301;
+    var b = 0xefcdab89;
+    var c = 0x98badcfe;
+    var d = 0x10325476;
+    var e = 0xc3d2e1f0;
+    var x = strToBigEndianArray(str);
+    var strBit = str.length * charBit;
+    x[strBit >> 5] |= 0x80 << (24 - (strBit & 0x1f));
+    x[((strBit + 64 >> 9) << 4) + 15] = strBit;
+    var len = x.length;
+    for (var i = 0; i < len; i += 16) {
+      var aa = a, bb = b, cc = c, dd = d, ee = e;
+      var j = 0;
+      for (; j < 16; j++) {
+        w[j] = x[i + j];
+        var t = modularAdd(modularAdd(rotateLeft(a, 5), (b & c) | ((~b) & d)),
+          modularAdd(modularAdd(e, w[j]), 0x5A827999));
+        e = d;
+        d = c;
+        c = rotateLeft(b, 30);
+        b = a;
+        a = t;
+      }
+      for (; j < 20; j++) {
+        w[j] = rotateLeft(w[j - 3] ^ w[j - 8] ^ w[j - 14] ^ w[j - 16], 1);
+        var t = modularAdd(modularAdd(rotateLeft(a, 5), (b & c) | ((~b) & d)),
+          modularAdd(modularAdd(e, w[j]), 0x5A827999));
+        e = d;
+        d = c;
+        c = rotateLeft(b, 30);
+        b = a;
+        a = t;
+      }
+      for (; j < 40; j++) {
+        w[j] = rotateLeft(w[j - 3] ^ w[j - 8] ^ w[j - 14] ^ w[j - 16], 1);
+        var t = modularAdd(modularAdd(rotateLeft(a, 5), b ^ c ^ d),
+          modularAdd(modularAdd(e, w[j]), 0x6ED9EBA1));
+        e = d;
+        d = c;
+        c = rotateLeft(b, 30);
+        b = a;
+        a = t;
+      }
+      for (; j < 60; j++) {
+        w[j] = rotateLeft(w[j - 3] ^ w[j - 8] ^ w[j - 14] ^ w[j - 16], 1);
+        var t = modularAdd(modularAdd(rotateLeft(a, 5), (b & c) | (d & (b | c))),
+          modularAdd(modularAdd(e, w[j]), 0x8F1BBCDC));
+        e = d;
+        d = c;
+        c = rotateLeft(b, 30);
+        b = a;
+        a = t;
+      }
+      for (; j < 80; j++) {
+        w[j] = rotateLeft(w[j - 3] ^ w[j - 8] ^ w[j - 14] ^ w[j - 16], 1);
+        var t = modularAdd(modularAdd(rotateLeft(a, 5), b ^ c ^ d),
+          modularAdd(modularAdd(e, w[j]), 0xCA62C1D6));
+        e = d;
+        d = c;
+        c = rotateLeft(b, 30);
+        b = a;
+        a = t;
+      }
+      a = modularAdd(a, aa);
+      b = modularAdd(b, bb);
+      c = modularAdd(c, cc);
+      d = modularAdd(d, dd);
+      e = modularAdd(e, ee);
+    }
+    return Array(a, b, c, d, e);
+  }
+
+  function strToBigEndianArray(str) {
+    var x = Array();
+    var mask = (1 << charBit) - 1;
+    var len = str.length;
+    var i = 0;
+    for (var j = 0; j < len; i += charBit) {
+      x[i >> 5] |= (str.charCodeAt(j++) & mask) << (32 - charBit - (i & 0x1f));
+    }
+    return x;
+  }
+
+  function modularAdd(a, b) {
+    var lowerSum = (a & 0xffff) + (b & 0xffff);
+    var upperSum = (a >> 16) + (b >> 16) + (lowerSum >> 16);
+    return (upperSum << 16) + (lowerSum & 0xffff);
+  }
+
+  function rotateLeft(val, n) {
+    return (val << n) | (val >>> (32 - n));
+  }
+
+  function bigEndianArrayToHex(ar) {
+    var charHex = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
+    var str = "";
+    for (var i = 0, tmp = ar.length << 2; i < tmp; i++) {
+      str += charHex[((ar[i >> 2] >> (((3 - (i & 3)) << 3) + 4)) & 0xF)] +
+        charHex[((ar[i >> 2] >> ((3 - (i & 3)) << 3)) & 0xF)];
+    }
+    return str;
+  }
+
+  function encodeBase64(ar5) {
+    var ar8 = [];
+    for (var j = 0, tmp = ar5.length << 2; j < tmp; j++) {
+      var x1 = (ar5[j >> 2] >> (((3 - (j & 3)) << 3) + 4)) & 0xF;
+      var x2 = (ar5[j >> 2] >> ((3 - (j & 3)) << 3)) & 0xF;
+      ar8.push(x1 << 4 | x2)
+    }
+
+    var b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+    var o1, o2, o3, h1, h2, h3, h4, bits, i = 0, enc = '';
+    do {
+      o1 = ar8[i++];
+      o2 = ar8[i++];
+      o3 = ar8[i++];
+
+      bits = o1 << 16 | o2 << 8 | o3;
+
+      h1 = bits >> 18 & 0x3f;
+      h2 = bits >> 12 & 0x3f;
+      h3 = bits >> 6 & 0x3f;
+      h4 = bits & 0x3f;
+
+      if (isNaN(o3)) h4 = 64;
+      if (isNaN(o2)) h3 = 64;
+
+      enc += b64.charAt(h1) + b64.charAt(h2) + b64.charAt(h3) + b64.charAt(h4);
+    } while (i < ar8.length);
+
+    return enc;
+  }
+
+  function easyHash() {
+    var seed = document.getElementById("_seed").value || 'chuang qian ming yue guang';
+
+    var mark = document.getElementById("_mark").value || 'sha20:trydofor:gmail.com';
+    var size = document.getElementById("_size").value || 20;
+    var _tmp = /^sha(\d+):[^:]+:[^:]+$/.exec(mark);
+    if (_tmp != null) {
+      mark = mark + ':' + seed;
+      size = _tmp[1];
+    } else {
+      var site = document.getElementById("_site").value || 'gmail.com';
+      var user = document.getElementById("_user").value || 'trydofor';
+      mark = 'sha' + size + ':' + user + ':' + site + ':' + seed;
+    }
+
+    console.log(mark);
+    if (/^sha\d+:[^:]+:[^:]+:.+$/.test(mark)) {
+      var arr = sha1Binary(mark);
+      var hex = bigEndianArrayToHex(arr);
+      console.log('hex=' + hex);
+      var b64 = encodeBase64(arr);
+      console.log('b64=' + b64);
+      document.getElementById("_text").value = b64.substr(0, size);
+    } else {
+      document.getElementById("_text").value = 'bad mark ' + mark;
+    }
+  }
+  </script>
+  <style>
+    body {
+      padding: 1rem;
+    }
+  </style>
+</head>
+
+<body>
+<div class="row">
+  <div class="col">
+    <div class="input-field">
+      <input id="_seed" placeholder="_seed='chuang qian ming yue guang'" type="text" ondblclick="this.select()">
+      <label for="_seed">Seed</label>
+    </div>
+    <div class="input-field">
+      <input id="_mark" placeholder="mark=sha$_size:$_user:$_site" type="text" ondblclick="this.select()">
+      <label for="_mark">Mark</label>
+    </div>
+    <div class="input-field">
+      <input id="_site" placeholder="_site='gmail.com'" type="text" ondblclick="this.select()">
+      <label for="_site">Site</label>
+    </div>
+    <div class="input-field">
+      <input id="_user" placeholder="_user='trydofor'" type="text" ondblclick="this.select()">
+      <label for="_user">User</label>
+    </div>
+    <div class="input-field">
+      <input id="_size" placeholder="_size=20" type="text" ondblclick="this.select()">
+      <label for="_size">Size</label>
+    </div>
+    <div>
+      <div>
+        <a href="#" onclick="easyHash()" class="btn">⚡️ Easy Hash</a>
+        <a href="https://github.com/trydofor/easy-pass" target="_blank" class="btn">❤️ Easy Pass</a>
+      </div>
+      <input id="_text" placeholder="echo -n $mark:$_seed | sha1sum | xxd -r -p | base64 | cut -c -$_size" type="text"
+        readonly ondblclick="this.select()">
+    </div>
+  </div>
+  <div class="col">
+    <pre id="markdown">
+```bash
+_seed='chuang qian ming yue guang'
+## para
+_site='gmail.com'
+_user='trydofor'
+_size=20
+## mark
+mark=sha$_size:$_user:$_site
+echo $mark
+## sha20:trydofor:gmail.com
+echo -n $mark:$_seed | sha1sum
+## a53332b953a6fe12991d823af6fea849d9ea48a4
+echo -n $mark:$_seed | sha1sum \
+| xxd -r -p | base64
+## pTMyuVOm/hKZHYI69v6oSdnqSKQ=
+echo -n $mark:$_seed | sha1sum \
+| xxd -r -p | base64 | cut -c -$_size
+## pTMyuVOm/hKZHYI69v6o
+``` </pre>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+</body>
+</html>
