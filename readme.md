@@ -1,4 +1,4 @@
-# Easy Pass
+# Easy Pass 1.0
 
 Easy rules to remember any password.
 
@@ -10,10 +10,11 @@ Just remember the hint string.
 
 ### 1.1.Token
 
-* `;` = end of part
-* `:` = hint or len
-* `|` = pipeline to transform
-* `*` = mask N chars
+* `\` = escape char. escaped as `\\`
+* `;` = end of part. escaped as `\;`
+* `:` = hint or len. escaped as `\:`
+* `|` = pipeline to transform. escaped as `\|`
+* `*` = mask N chars. escaped as `\*`
 
 ### 1.2.Refer
 
